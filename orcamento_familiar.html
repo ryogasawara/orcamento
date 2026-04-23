@@ -391,9 +391,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       <div class="card" style="border-color:#BFDBFE;background:var(--blue-light)">
         <div style="font-size:13px;font-weight:700;color:#1E40AF;margin-bottom:6px">💡 Como funciona</div>
         <div style="font-size:12px;color:#1E40AF;line-height:1.8;font-weight:600">
-          • <strong>Enviar</strong> — salva seus dados locais no Drive<br>
-          • <strong>Receber</strong> — baixa os dados do Drive para este dispositivo<br>
-          • <strong>Auto-sync</strong> — envia automaticamente sempre que você adicionar algo<br>
+          • <strong>Ao abrir o app</strong> — baixa automaticamente os dados mais recentes do Drive<br>
+          • <strong>Auto-sync ativo</strong> — envia automaticamente a cada lançamento<br>
+          • <strong>Enviar</strong> — força o envio manual dos dados ao Drive<br>
+          • <strong>Receber</strong> — força o download manual dos dados do Drive<br>
           • O arquivo fica em: <strong>Meu Drive / orcamento_familiar.json</strong>
         </div>
       </div>
@@ -977,13 +978,40 @@ function initSyncUI(){
     document.getElementById('sync-panel').style.display='block';
     const el2=document.getElementById('gdrive-client-id-2');if(el2)el2.value=gdClientId;
     const saved=localStorage.getItem('gd_token');
-    if(saved){gdToken=saved;atualizarUserInfo();}
+    if(saved){
+      gdToken=saved;
+      atualizarUserInfo();
+      // auto-receber ao abrir se tiver token salvo
+      setTimeout(()=>gdReceberSilencioso(),2000);
+    }
   }else{
     document.getElementById('sync-setup').style.display='block';
     document.getElementById('sync-panel').style.display='none';
   }
   if(localStorage.getItem('gd_autosync')==='1'){autoSyncOn=true;atualizarBtnAutoSync();}
   atualizarUltSync();
+}
+
+async function gdReceberSilencioso(){
+  if(!gdToken)return;
+  try{
+    let fid=await gdBuscarFileId();
+    if(!fid)return;
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,{
+      headers:{Authorization:'Bearer '+gdToken}});
+    if(!r.ok)return;
+    const dados=await r.json();
+    // só atualiza se os dados do Drive forem mais recentes
+    state=dados;
+    try{localStorage.setItem('orc_v3',JSON.stringify(state));}catch(e){}
+    render();
+    const agora=new Date().toLocaleString('pt-BR');
+    localStorage.setItem('gd_last_sync','⬇ Sincronizado ao abrir em '+agora);
+    atualizarUltSync();
+    mostrarStatus('✅ Dados sincronizados com o Drive!','ok');
+  }catch(e){
+    // silencioso — não mostra erro se falhar ao abrir
+  }
 }
 
 function salvarClientId(){
