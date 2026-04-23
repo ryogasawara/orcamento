@@ -56,6 +56,8 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 .item-date{font-size:11px;color:var(--text3);font-weight:600;white-space:nowrap}
 .item-amt{font-size:14px;font-weight:700;white-space:nowrap;flex-shrink:0}
 .item-amt.neg{color:var(--red)}.item-amt.pos{color:var(--green)}
+.edit-btn{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:transparent;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.edit-btn:hover{background:var(--blue-light);border-color:var(--blue)}
 .del-btn{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
 .del-btn:hover{background:var(--red-light);color:var(--red);border-color:var(--red)}
 .tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;flex-shrink:0}
@@ -165,8 +167,44 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
     </div>
   </div>
 
-  <!-- MODAL BOTTOM SHEET -->
-  <div class="modal-overlay" id="modal-overlay" onclick="fecharModal(event)">
+  <!-- MODAL EDITAR -->
+  <div class="modal-overlay" id="edit-overlay" onclick="fecharEditar(event)">
+    <div class="modal-box" id="edit-box">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-dot" id="edit-dot" style="background:var(--blue)"></div>
+        <div class="modal-ttl" id="edit-ttl">Editar lançamento</div>
+        <button class="modal-close" onclick="fecharEditar()">×</button>
+      </div>
+      <div class="modal-body" style="padding-top:14px">
+        <div class="form-group"><label>Descrição</label><input id="edit-nome"/></div>
+        <div class="form-row">
+          <div class="form-group"><label>Valor (R$)</label><input id="edit-valor" type="number" inputmode="decimal"/></div>
+          <div class="form-group"><label>Data</label><input id="edit-data" type="date"/></div>
+        </div>
+        <div class="form-group" id="edit-cat-wrap"><label>Categoria</label>
+          <select id="edit-cat">
+            <option value="housing">Moradia</option><option value="food">Alimentação</option>
+            <option value="transport">Transporte</option><option value="health">Saúde</option>
+            <option value="education">Educação</option><option value="leisure">Lazer</option>
+            <option value="other">Outros</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Quem</label>
+          <select id="edit-pessoa">
+            <option value="A" id="edit-opt-a">Pessoa A</option>
+            <option value="B" id="edit-opt-b">Pessoa B</option>
+            <option value="ambos">Ambos</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+          <button class="btn-confirm" onclick="salvarEdicao()" style="padding:13px;font-size:15px">✓ Salvar</button>
+          <button class="btn-cancel" onclick="fecharEditar()" style="padding:13px;font-size:15px">Cancelar</button>
+        </div>
+        <button onclick="delItemAtual()" style="width:100%;margin-top:10px;padding:11px;background:transparent;color:var(--red);border:1.5px solid var(--red);border-radius:var(--radius-sm);font-family:Nunito,sans-serif;font-size:14px;font-weight:700;cursor:pointer">🗑 Excluir lançamento</button>
+      </div>
+    </div>
+  </div>
     <div class="modal-box" id="modal-box">
       <div class="modal-handle"></div>
       <div class="modal-header">
@@ -406,8 +444,46 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
         </div>
         <button class="btn-primary" onclick="salvarClientId2()">Atualizar</button>
       </div>
+
+      <!-- BACKUP LOCAL -->
+      <div class="card">
+        <div class="card-title">💾 Backup local — nunca perca seu histórico</div>
+        <p style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:14px;font-weight:600">
+          Exporte todos os seus dados como arquivo <strong>.json</strong> e importe em qualquer versão futura do app — mesmo que o app seja atualizado, seu histórico completo é preservado.
+        </p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <button class="btn-primary" onclick="exportarBackup()" style="background:var(--green)">⬇ Exportar backup</button>
+          <button class="btn-primary" onclick="document.getElementById('import-file').click()" style="background:var(--amber)">⬆ Importar backup</button>
+        </div>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importarBackup(event)"/>
+        <div id="backup-status" style="display:none;margin-top:10px;font-size:12px;font-weight:600;padding:8px 12px;border-radius:var(--radius-sm)"></div>
+      </div>
     </div>
 
+  </div>
+
+  <!-- MODAL EDITAR META -->
+  <div class="modal-overlay" id="edit-meta-overlay" onclick="fecharEditarMeta(event)">
+    <div class="modal-box">
+      <div class="modal-handle"></div>
+      <div class="modal-header">
+        <div class="modal-dot" style="background:#10B981"></div>
+        <div class="modal-ttl">Editar meta</div>
+        <button class="modal-close" onclick="fecharEditarMeta()">×</button>
+      </div>
+      <div class="modal-body" style="padding-top:14px">
+        <div class="form-group"><label>Nome da meta</label><input id="emeta-nome"/></div>
+        <div class="form-row">
+          <div class="form-group"><label>Meta total (R$)</label><input id="emeta-total" type="number" inputmode="decimal"/></div>
+          <div class="form-group"><label>Já tenho (R$)</label><input id="emeta-atual" type="number" inputmode="decimal"/></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">
+          <button class="btn-confirm" onclick="salvarEdicaoMeta()" style="padding:13px;font-size:15px">✓ Salvar</button>
+          <button class="btn-cancel" onclick="fecharEditarMeta()" style="padding:13px;font-size:15px">Cancelar</button>
+        </div>
+        <button onclick="delMetaAtual()" style="width:100%;margin-top:10px;padding:11px;background:transparent;color:var(--red);border:1.5px solid var(--red);border-radius:var(--radius-sm);font-family:Nunito,sans-serif;font-size:14px;font-weight:700;cursor:pointer">🗑 Excluir meta</button>
+      </div>
+    </div>
   </div>
 
 </div>
@@ -568,9 +644,10 @@ function renderDivisao(){
 }
 
 function itemRow(item,tipo){
+  const colecao=tipo==='despesa'?'despesas':'receitas';
   return`<div class="item-row">
     <div class="item-avatar av-${item.pessoa}">${item.pessoa==='ambos'?'AB':nomeP(item.pessoa).charAt(0)}</div>
-    <div class="item-info">
+    <div class="item-info" onclick="abrirEditar('${colecao}',${item.id})" style="cursor:pointer">
       <div class="item-name">${item.nome}</div>
       <div class="item-meta">
         ${tipo==='despesa'?`<span class="tag ${item.cat}">${catNames[item.cat]}</span>`:``}
@@ -578,8 +655,9 @@ function itemRow(item,tipo){
         <span class="item-date">· ${nomeP(item.pessoa)}</span>
       </div>
     </div>
-    <span class="item-amt ${tipo==='despesa'?'neg':'pos'}">${fmt(item.valor)}</span>
-    <button class="del-btn" onclick="delItem('${tipo==='despesa'?'despesas':'receitas'}',${item.id})">×</button>
+    <span class="item-amt ${tipo==='despesa'?'neg':'pos'}" onclick="abrirEditar('${colecao}',${item.id})" style="cursor:pointer">${fmt(item.valor)}</span>
+    <button class="edit-btn" onclick="abrirEditar('${colecao}',${item.id})" title="Editar">✏️</button>
+    <button class="del-btn" onclick="delItem('${colecao}',${item.id})">×</button>
   </div>`;
 }
 
@@ -600,13 +678,17 @@ function renderMetas(){
   el.innerHTML=state.metas.length?state.metas.map(m=>{
     const pct=Math.min(100,Math.round((m.atual/m.total)*100));
     const cor=pct>=100?'#10B981':pct>=60?'#3B82F6':'#F59E0B';
-    return`<div class="prog-wrap">
-      <div class="prog-label"><span>${m.nome}</span><span style="font-weight:700">${pct}%</span></div>
-      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${cor}"></div></div>
-      <div style="display:flex;justify-content:space-between;margin-top:4px">
-        <span style="font-size:12px;color:var(--text3);font-weight:600">${fmt(m.atual)} / ${fmt(m.total)}</span>
+    return`<div class="prog-wrap" style="border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:10px;background:var(--surface)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700">${m.nome}</div>
+          <div style="font-size:12px;color:var(--text3);font-weight:600;margin-top:2px">${fmt(m.atual)} de ${fmt(m.total)}</div>
+        </div>
+        <span style="font-size:15px;font-weight:700;color:${cor}">${pct}%</span>
+        <button class="edit-btn" onclick="abrirEditarMeta(${m.id})" title="Editar">✏️</button>
         <button class="del-btn" onclick="delItem('metas',${m.id})">×</button>
       </div>
+      <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${cor}"></div></div>
     </div>`;
   }).join(''):`<div class="empty">Nenhuma meta cadastrada</div>`;
 }
@@ -966,7 +1048,138 @@ function toggleVoice(){
 function micI(){return'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';}
 function stopI(){return'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6"/></svg>';}
 
-// ── GOOGLE DRIVE SYNC ────────────────────────────────────────
+// ── EDITAR META ───────────────────────────────────────────────
+let editandoMetaId=null;
+
+function abrirEditarMeta(id){
+  const m=state.metas.find(x=>x.id===id);if(!m)return;
+  editandoMetaId=id;
+  document.getElementById('emeta-nome').value=m.nome||'';
+  document.getElementById('emeta-total').value=m.total||'';
+  document.getElementById('emeta-atual').value=m.atual||0;
+  document.getElementById('edit-meta-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function salvarEdicaoMeta(){
+  const idx=state.metas.findIndex(x=>x.id===editandoMetaId);if(idx===-1)return;
+  const nome=document.getElementById('emeta-nome').value.trim();
+  const total=parseFloat(document.getElementById('emeta-total').value);
+  const atual=parseFloat(document.getElementById('emeta-atual').value)||0;
+  if(!nome||!total){alert('Preencha nome e valor da meta.');return;}
+  state.metas[idx]={...state.metas[idx],nome,total,atual};
+  fecharEditarMeta();salvar();render();
+}
+
+function delMetaAtual(){
+  if(!confirm('Excluir esta meta?'))return;
+  state.metas=state.metas.filter(x=>x.id!==editandoMetaId);
+  fecharEditarMeta();salvar();render();
+}
+
+function fecharEditarMeta(evt){
+  if(evt&&evt.target!==document.getElementById('edit-meta-overlay'))return;
+  document.getElementById('edit-meta-overlay').classList.remove('open');
+  document.body.style.overflow='';
+  editandoMetaId=null;
+}
+
+// ── BACKUP LOCAL ──────────────────────────────────────────────
+function exportarBackup(){
+  const dados=JSON.stringify(state,null,2);
+  const blob=new Blob([dados],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const agora=new Date();
+  const nome=`backup_orcamento_${agora.getFullYear()}${String(agora.getMonth()+1).padStart(2,'0')}${String(agora.getDate()).padStart(2,'0')}.json`;
+  a.href=url;a.download=nome;a.click();
+  URL.revokeObjectURL(url);
+  mostrarBackupStatus('✅ Backup exportado: '+nome,'ok');
+}
+
+function importarBackup(evt){
+  const file=evt.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const dados=JSON.parse(e.target.result);
+      if(!dados.receitas||!dados.despesas){throw new Error('Arquivo inválido');}
+      if(!confirm(`Importar backup?\n\nIsso vai substituir os dados atuais por:\n• ${dados.receitas.length} receitas\n• ${dados.despesas.length} despesas\n• ${dados.metas?.length||0} metas\n\nSeus dados atuais serão perdidos.`)){return;}
+      state=dados;
+      salvar();render();
+      mostrarBackupStatus('✅ Backup importado com sucesso!','ok');
+    }catch(err){
+      mostrarBackupStatus('❌ Erro: arquivo inválido ou corrompido.','err');
+    }
+    evt.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+function mostrarBackupStatus(msg,tipo){
+  const el=document.getElementById('backup-status');if(!el)return;
+  el.style.display='block';
+  el.style.background=tipo==='ok'?'var(--green-light)':'var(--red-light)';
+  el.style.color=tipo==='ok'?'#065F46':'#991B1B';
+  el.textContent=msg;
+  setTimeout(()=>el.style.display='none',4000);
+}
+
+
+let editando={colecao:null,id:null};
+
+function abrirEditar(colecao,id){
+  const item=state[colecao].find(x=>x.id===id);
+  if(!item)return;
+  editando={colecao,id};
+  const isDespesa=colecao==='despesas';
+  document.getElementById('edit-ttl').textContent=isDespesa?'Editar despesa':'Editar receita';
+  document.getElementById('edit-dot').style.background=isDespesa?'var(--red)':'var(--green)';
+  document.getElementById('edit-nome').value=item.nome||'';
+  document.getElementById('edit-valor').value=item.valor||'';
+  document.getElementById('edit-data').value=item.data||HOJE_STR;
+  document.getElementById('edit-cat-wrap').style.display=isDespesa?'block':'none';
+  if(isDespesa)document.getElementById('edit-cat').value=item.cat||'other';
+  document.getElementById('edit-pessoa').value=item.pessoa||'ambos';
+  // atualiza nomes nos selects
+  const oa=document.getElementById('edit-opt-a');const ob=document.getElementById('edit-opt-b');
+  if(oa)oa.textContent=state.nomeA;if(ob)ob.textContent=state.nomeB;
+  document.getElementById('edit-overlay').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function salvarEdicao(){
+  const{colecao,id}=editando;
+  if(!colecao||!id)return;
+  const idx=state[colecao].findIndex(x=>x.id===id);
+  if(idx===-1)return;
+  const nome=document.getElementById('edit-nome').value.trim();
+  const valor=parseFloat(document.getElementById('edit-valor').value);
+  const data=document.getElementById('edit-data').value||HOJE_STR;
+  const pessoa=document.getElementById('edit-pessoa').value;
+  if(!nome||!valor){alert('Preencha descrição e valor.');return;}
+  state[colecao][idx]={...state[colecao][idx],nome,valor,data,pessoa};
+  if(colecao==='despesas')state[colecao][idx].cat=document.getElementById('edit-cat').value;
+  fecharEditar();
+  salvar();render();
+}
+
+function delItemAtual(){
+  const{colecao,id}=editando;
+  if(!colecao||!id)return;
+  if(!confirm('Excluir este lançamento?'))return;
+  state[colecao]=state[colecao].filter(x=>x.id!==id);
+  fecharEditar();salvar();render();
+}
+
+function fecharEditar(evt){
+  if(evt&&evt.target!==document.getElementById('edit-overlay'))return;
+  document.getElementById('edit-overlay').classList.remove('open');
+  document.body.style.overflow='';
+  editando={colecao:null,id:null};
+}
+
+
 const GD_FILE='orcamento_familiar.json';
 let gdToken=null,gdFileId=null,autoSyncOn=false;
 let gdClientId=localStorage.getItem('gd_client_id')||'308621696135-tvrkh5urhv4hkvi8mbg5h46h2t1snato.apps.googleusercontent.com';
