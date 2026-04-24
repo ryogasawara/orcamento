@@ -32,14 +32,15 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 .nav{display:flex;min-width:max-content;padding:0 12px}
 .nav button{font-family:'Nunito',sans-serif;font-size:13px;font-weight:600;padding:13px 14px 11px;border:none;background:transparent;color:var(--text2);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s}
 .nav button.active{color:var(--blue);border-bottom-color:var(--blue)}
-.content{padding:16px;max-width:600px;margin:0 auto}
+.content{padding:16px 20px;max-width:720px;margin:0 auto}
 .section{display:none}.section.active{display:block}
-.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
-.card-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px}
-.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.metric{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:14px;box-shadow:var(--shadow)}
+.tab-wrap{max-width:680px;margin:0 auto}
+.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:20px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px}
+.metric-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;max-width:680px;margin-left:auto;margin-right:auto}
+.metric{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:16px;box-shadow:var(--shadow)}
 .metric .lbl{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
-.metric .val{font-size:19px;font-weight:700}
+.metric .val{font-size:20px;font-weight:700}
 .val.blue{color:var(--blue)}.val.green{color:var(--green)}.val.red{color:var(--red)}.val.amber{color:var(--amber)}
 .alert{border-radius:var(--radius-sm);padding:9px 12px;margin-bottom:8px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
 .alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
@@ -154,6 +155,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 
   <!-- RESUMO -->
   <div id="tab-resumo" class="section active">
+  <div class="tab-wrap">
     <div class="metric-grid" id="metrics"></div>
     <div id="alertas-resumo"></div>
     <div class="card">
@@ -165,6 +167,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       <div style="position:relative;width:100%;height:290px"><canvas id="pieChart"></canvas></div>
       <div class="pie-hint">👆 Toque em uma fatia para ver os lançamentos</div>
     </div>
+  </div>
   </div>
 
   <!-- MODAL EDITAR -->
@@ -222,7 +225,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
   </div>
 
   <!-- RECEITAS -->
-  <div id="tab-receitas" class="section">
+  <div id="tab-receitas" class="section"><div class="tab-wrap">
     <div class="metric-grid">
       <div class="metric"><div class="lbl">Total receitas</div><div class="val green" id="rec-total-val">R$ 0</div></div>
       <div class="metric"><div class="lbl">Lançamentos</div><div class="val blue" id="rec-count-val">0</div></div>
@@ -247,10 +250,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       </div>
       <button class="btn-primary" onclick="addReceita()">+ Adicionar receita</button>
     </div>
-  </div>
+  </div></div>
 
   <!-- DESPESAS -->
-  <div id="tab-despesas" class="section">
+  <div id="tab-despesas" class="section"><div class="tab-wrap">
     <div class="metric-grid">
       <div class="metric"><div class="lbl">Total despesas</div><div class="val red" id="desp-total-val">R$ 0</div></div>
       <div class="metric"><div class="lbl">Lançamentos</div><div class="val blue" id="desp-count-val">0</div></div>
@@ -286,10 +289,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       </div>
       <button class="btn-primary" onclick="addDespesa()">+ Adicionar despesa</button>
     </div>
-  </div>
+  </div></div>
 
   <!-- HISTÓRICO -->
-  <div id="tab-historico" class="section">
+  <div id="tab-historico" class="section"><div class="tab-wrap">
     <div class="card">
       <div class="card-title">Gráfico anual <span style="font-size:10px;color:var(--text3);font-weight:600;text-transform:none;letter-spacing:0">— toque numa barra</span></div>
       <div class="hist-filter">
@@ -315,10 +318,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       </div>
       <div id="lista-todos"></div>
     </div>
-  </div>
+  </div></div>
 
   <!-- METAS -->
-  <div id="tab-metas" class="section">
+  <div id="tab-metas" class="section"><div class="tab-wrap">
     <div class="metric-grid">
       <div class="metric"><div class="lbl">Total metas</div><div class="val blue" id="meta-count-val">0</div></div>
       <div class="metric"><div class="lbl">Média atingida</div><div class="val green" id="meta-avg-val">0%</div></div>
@@ -336,10 +339,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       </div>
       <button class="btn-primary" onclick="addMeta()">+ Adicionar meta</button>
     </div>
-  </div>
+  </div></div>
 
   <!-- ALERTAS -->
-  <div id="tab-alertas" class="section">
+  <div id="tab-alertas" class="section"><div class="tab-wrap">
     <div class="card">
       <div class="card-title">Nomes das pessoas</div>
       <div class="form-row">
@@ -352,10 +355,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       <p style="font-size:12px;color:var(--text3);font-weight:600;margin-bottom:14px">Aviso amarelo em 80%, vermelho ao ultrapassar.</p>
       <div id="lista-limites"></div>
     </div>
-  </div>
+  </div></div>
 
   <!-- ENTRADA RÁPIDA -->
-  <div id="tab-rapido" class="section">
+  <div id="tab-rapido" class="section"><div class="tab-wrap">
     <div class="voice-area">
       <div style="font-size:14px;font-weight:700;color:#1E40AF;margin-bottom:8px">Digite em linguagem natural</div>
       <input id="nlp-input" placeholder='Ex: "gastei 150 no mercado dia 10, foi a Maria"'
@@ -383,13 +386,11 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
         <button class="btn-cancel" onclick="document.getElementById('nlp-preview').style.display='none'">Cancelar</button>
       </div>
     </div>
-  </div>
+  </div></div>
 
   <!-- SYNC GOOGLE DRIVE -->
-  <div id="tab-sync" class="section">
-
-    <!-- STATUS BAR -->
-    <div id="sync-status-bar" style="display:none;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px"></div>
+  <div id="tab-sync" class="section"><div class="tab-wrap">
+    <div id="sync-status-bar" style="display:none"></div>
 
     <!-- SETUP: SEM CLIENT ID -->
     <div id="sync-setup" class="card">
@@ -477,7 +478,7 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       </div>
     </div>
 
-  </div>
+  </div></div>
 
   <!-- MODAL EDITAR META -->
   <div class="modal-overlay" id="edit-meta-overlay" onclick="fecharEditarMeta(event)">
