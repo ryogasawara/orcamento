@@ -205,6 +205,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
       </div>
     </div>
   </div>
+  </div>
+
+  <!-- MODAL DETALHES -->
+  <div class="modal-overlay" id="modal-overlay" onclick="fecharModal(event)">
     <div class="modal-box" id="modal-box">
       <div class="modal-handle"></div>
       <div class="modal-header">
@@ -219,12 +223,16 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 
   <!-- RECEITAS -->
   <div id="tab-receitas" class="section">
+    <div class="metric-grid">
+      <div class="metric"><div class="lbl">Total receitas</div><div class="val green" id="rec-total-val">R$ 0</div></div>
+      <div class="metric"><div class="lbl">Lançamentos</div><div class="val blue" id="rec-count-val">0</div></div>
+    </div>
     <div class="card">
       <div class="card-title">Receitas — <span id="lbl-rec"></span></div>
       <div id="lista-receitas"></div>
     </div>
     <div class="card">
-      <div class="card-title">Nova receita</div>
+      <div class="card-title">+ Nova receita</div>
       <div class="form-group"><label>Descrição</label><input id="rec-nome" placeholder="Ex: Salário, Freela..." /></div>
       <div class="form-row">
         <div class="form-group"><label>Valor (R$)</label><input id="rec-valor" type="number" inputmode="decimal" placeholder="0,00"/></div>
@@ -243,12 +251,17 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 
   <!-- DESPESAS -->
   <div id="tab-despesas" class="section">
+    <div class="metric-grid">
+      <div class="metric"><div class="lbl">Total despesas</div><div class="val red" id="desp-total-val">R$ 0</div></div>
+      <div class="metric"><div class="lbl">Lançamentos</div><div class="val blue" id="desp-count-val">0</div></div>
+    </div>
+    <div id="alertas-desp"></div>
     <div class="card">
       <div class="card-title">Despesas — <span id="lbl-desp"></span></div>
       <div id="lista-despesas"></div>
     </div>
     <div class="card">
-      <div class="card-title">Nova despesa</div>
+      <div class="card-title">+ Nova despesa</div>
       <div class="form-group"><label>Descrição</label><input id="desp-nome" placeholder="Ex: Supermercado..." /></div>
       <div class="form-row">
         <div class="form-group"><label>Valor (R$)</label><input id="desp-valor" type="number" inputmode="decimal" placeholder="0,00"/></div>
@@ -306,12 +319,16 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
 
   <!-- METAS -->
   <div id="tab-metas" class="section">
+    <div class="metric-grid">
+      <div class="metric"><div class="lbl">Total metas</div><div class="val blue" id="meta-count-val">0</div></div>
+      <div class="metric"><div class="lbl">Média atingida</div><div class="val green" id="meta-avg-val">0%</div></div>
+    </div>
     <div class="card">
       <div class="card-title">Suas metas</div>
       <div id="lista-metas"></div>
     </div>
     <div class="card">
-      <div class="card-title">Nova meta</div>
+      <div class="card-title">+ Nova meta</div>
       <div class="form-group"><label>Nome</label><input id="meta-nome" placeholder="Ex: Viagem, Reserva..."/></div>
       <div class="form-row">
         <div class="form-group"><label>Meta (R$)</label><input id="meta-total" type="number" inputmode="decimal" placeholder="0,00"/></div>
@@ -665,12 +682,21 @@ function renderReceitas(){
   const el=document.getElementById('lista-receitas');if(!el)return;
   const l=[...recFilt()].sort((a,b)=>(b.data||'').localeCompare(a.data||''));
   el.innerHTML=l.length?l.map(r=>itemRow(r,'receita')).join(''):`<div class="empty">Nenhuma receita em ${MESES_FULL[filtroMes]} ${filtroAno}</div>`;
+  const tv=document.getElementById('rec-total-val');const cv=document.getElementById('rec-count-val');
+  if(tv)tv.textContent=fmt(l.reduce((s,r)=>s+Number(r.valor),0));
+  if(cv)cv.textContent=l.length;
 }
 
 function renderDespesas(){
   const el=document.getElementById('lista-despesas');if(!el)return;
   const l=[...despFilt()].sort((a,b)=>(b.data||'').localeCompare(a.data||''));
   el.innerHTML=l.length?l.map(d=>itemRow(d,'despesa')).join(''):`<div class="empty">Nenhuma despesa em ${MESES_FULL[filtroMes]} ${filtroAno}</div>`;
+  const tv=document.getElementById('desp-total-val');const cv=document.getElementById('desp-count-val');
+  if(tv)tv.textContent=fmt(l.reduce((s,d)=>s+Number(d.valor),0));
+  if(cv)cv.textContent=l.length;
+  // alertas na aba despesas
+  const ad=document.getElementById('alertas-desp');
+  if(ad){const al=getAlerts();ad.innerHTML=al.length?al.map(a=>`<div class="alert ${a.l}"><div class="alert-dot"></div>${catNames[a.cat]}: ${fmt(a.val)} de ${fmt(a.lim)} (${a.p}%)</div>`).join(''):'';}
 }
 
 function renderMetas(){
@@ -691,6 +717,14 @@ function renderMetas(){
       <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${cor}"></div></div>
     </div>`;
   }).join(''):`<div class="empty">Nenhuma meta cadastrada</div>`;
+  // summary metrics
+  const mc=document.getElementById('meta-count-val');
+  const ma=document.getElementById('meta-avg-val');
+  if(mc)mc.textContent=state.metas.length;
+  if(ma){
+    const avg=state.metas.length?Math.round(state.metas.reduce((s,m)=>s+Math.min(100,(m.atual/m.total)*100),0)/state.metas.length):0;
+    ma.textContent=avg+'%';
+  }
 }
 
 function renderLimites(){
@@ -1360,12 +1394,44 @@ function mostrarStatus(msg,tipo){
   if(tipo==='ok')setTimeout(()=>el.setAttribute('style','display:none'),4000);
 }
 
-// sobrescreve salvar para auto-sync
+// sobrescreve salvar para auto-sync — versão corrigida
 function salvar(){
   try{localStorage.setItem('orc_v3',JSON.stringify(state));}catch(e){}
   const b=document.getElementById('save-banner');
   if(b){b.classList.add('show');setTimeout(()=>b.classList.remove('show'),1800);}
-  if(autoSyncOn&&gdToken)gdEnviar();
+  // auto-sync: envia para o Drive se ativo e logado
+  if(autoSyncOn&&gdToken){
+    gdEnviarSilencioso();
+  }
+}
+
+async function gdEnviarSilencioso(){
+  try{
+    const json=JSON.stringify(state,null,2);
+    const blob=new Blob([json],{type:'application/json'});
+    let fid=await gdBuscarFileId();
+    let r;
+    if(fid){
+      r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fid}?uploadType=media`,{
+        method:'PATCH',headers:{Authorization:'Bearer '+gdToken,'Content-Type':'application/json'},body:json});
+    }else{
+      const meta=JSON.stringify({name:GD_FILE,mimeType:'application/json'});
+      const form=new FormData();
+      form.append('metadata',new Blob([meta],{type:'application/json'}));
+      form.append('file',blob);
+      r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+        method:'POST',headers:{Authorization:'Bearer '+gdToken},body:form});
+    }
+    if(r&&r.ok){
+      const agora=new Date().toLocaleString('pt-BR');
+      localStorage.setItem('gd_last_sync','⬆ Auto-sync em '+agora);
+      atualizarUltSync();
+    }else{
+      // token expirado — desativa auto-sync e pede novo login
+      gdToken=null;localStorage.removeItem('gd_token');
+      mostrarStatus('Token expirado. Faça login novamente em ☁️ Sync.','warn');
+    }
+  }catch(e){console.warn('Auto-sync falhou:',e);}
 }
 
 render();
