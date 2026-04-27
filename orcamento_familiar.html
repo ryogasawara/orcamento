@@ -1225,19 +1225,46 @@ function initSyncUI(){
     document.getElementById('sync-setup').style.display='none';
     document.getElementById('sync-panel').style.display='block';
     const el2=document.getElementById('gdrive-client-id-2');if(el2)el2.value=gdClientId;
-    const saved=localStorage.getItem('gd_token');
-    if(saved){
-      gdToken=saved;
-      atualizarUserInfo();
-      // auto-receber ao abrir se tiver token salvo
-      setTimeout(()=>gdReceberSilencioso(),2000);
-    }
+    // sempre tenta renovar token silenciosamente ao abrir
+    gdToken=null;
+    localStorage.removeItem('gd_token');
+    gdRenovarTokenSilencioso();
   }else{
     document.getElementById('sync-setup').style.display='block';
     document.getElementById('sync-panel').style.display='none';
   }
   if(localStorage.getItem('gd_autosync')==='1'){autoSyncOn=true;atualizarBtnAutoSync();}
   atualizarUltSync();
+}
+
+function gdRenovarTokenSilencioso(){
+  if(!gdClientId)return;
+  if(typeof google==='undefined'){
+    setTimeout(gdRenovarTokenSilencioso,1000);
+    return;
+  }
+  try{
+    const client=google.accounts.oauth2.initTokenClient({
+      client_id:gdClientId,
+      scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+      prompt:'', // sem prompt = tenta renovar silenciosamente se já logado antes
+      callback:(resp)=>{
+        if(resp.error||!resp.access_token){
+          // não conseguiu renovar silenciosamente — usuário precisa logar manualmente
+          document.getElementById('sync-user-name').textContent='Faça login para sincronizar';
+          document.getElementById('sync-user-email').textContent='';
+          return;
+        }
+        gdToken=resp.access_token;
+        atualizarUserInfo();
+        // após renovar token, faz auto-receber se tiver dados no Drive
+        setTimeout(()=>gdReceberSilencioso(),500);
+      }
+    });
+    client.requestAccessToken({prompt:''});
+  }catch(e){
+    console.warn('Renovação silenciosa falhou:',e);
+  }
 }
 
 async function gdReceberSilencioso(){
@@ -1277,16 +1304,18 @@ function salvarClientId2(){
 
 function gdLogin(){
   if(!gdClientId){alert('Configure o Client ID primeiro.');return;}
-  if(typeof google==='undefined'){mostrarStatus('Biblioteca Google ainda carregando, aguarde 2s e tente novamente.','warn');return;}
+  if(typeof google==='undefined'){mostrarStatus('Biblioteca Google ainda carregando, aguarde e tente novamente.','warn');return;}
   const client=google.accounts.oauth2.initTokenClient({
     client_id:gdClientId,
     scope:'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
     callback:(resp)=>{
       if(resp.error){mostrarStatus('Erro no login: '+resp.error,'err');return;}
       gdToken=resp.access_token;
-      localStorage.setItem('gd_token',gdToken);
+      // não salva no localStorage — token expira em 1h, renovação é automática
       atualizarUserInfo();
       mostrarStatus('✅ Conectado ao Google!','ok');
+      // agenda renovação automática antes de expirar (55 minutos)
+      setTimeout(gdRenovarTokenSilencioso, 55*60*1000);
     }
   });
   client.requestAccessToken({prompt:'select_account'});
@@ -1295,6 +1324,9 @@ function gdLogin(){
 function gdLogout(){
   gdToken=null;gdFileId=null;
   localStorage.removeItem('gd_token');
+  autoSyncOn=false;
+  localStorage.setItem('gd_autosync','0');
+  atualizarBtnAutoSync();
   document.getElementById('sync-user-name').textContent='Não conectado';
   document.getElementById('sync-user-email').textContent='';
   mostrarStatus('Desconectado.','info');
@@ -1427,10 +1459,12 @@ async function gdEnviarSilencioso(){
       const agora=new Date().toLocaleString('pt-BR');
       localStorage.setItem('gd_last_sync','⬆ Auto-sync em '+agora);
       atualizarUltSync();
+    }else if(r&&r.status===401){
+      // token expirado — renova automaticamente
+      gdToken=null;
+      gdRenovarTokenSilencioso();
     }else{
-      // token expirado — desativa auto-sync e pede novo login
-      gdToken=null;localStorage.removeItem('gd_token');
-      mostrarStatus('Token expirado. Faça login novamente em ☁️ Sync.','warn');
+      console.warn('Auto-sync falhou com status:',(r?r.status:'sem resposta'));
     }
   }catch(e){console.warn('Auto-sync falhou:',e);}
 }
