@@ -1345,11 +1345,19 @@ async function atualizarUserInfo(){
 
 async function gdBuscarFileId(){
   if(!gdToken)return null;
-  const r=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${GD_FILE}'+and+trashed=false&spaces=drive&fields=files(id,name)`,
-    {headers:{Authorization:'Bearer '+gdToken}});
-  const d=await r.json();
-  if(d.files&&d.files.length>0){gdFileId=d.files[0].id;return gdFileId;}
-  return null;
+  try{
+    // busca em todos os drives acessíveis (próprio + compartilhados)
+    const r=await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=name='${GD_FILE}'+and+trashed=false&spaces=drive&fields=files(id,name,owners)&includeItemsFromAllDrives=true&supportsAllDrives=true`,
+      {headers:{Authorization:'Bearer '+gdToken}}
+    );
+    const d=await r.json();
+    if(d.files&&d.files.length>0){
+      gdFileId=d.files[0].id;
+      return gdFileId;
+    }
+    return null;
+  }catch(e){console.warn('Erro ao buscar arquivo:',e);return null;}
 }
 
 async function gdEnviar(){
@@ -1357,25 +1365,27 @@ async function gdEnviar(){
   mostrarStatus('Enviando para o Drive...','info');
   try{
     const json=JSON.stringify(state,null,2);
-    const blob=new Blob([json],{type:'application/json'});
     let fid=await gdBuscarFileId();
     let r;
     if(fid){
-      r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fid}?uploadType=media`,{
+      r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fid}?uploadType=media&supportsAllDrives=true`,{
         method:'PATCH',headers:{Authorization:'Bearer '+gdToken,'Content-Type':'application/json'},body:json});
     }else{
       const meta=JSON.stringify({name:GD_FILE,mimeType:'application/json'});
       const form=new FormData();
       form.append('metadata',new Blob([meta],{type:'application/json'}));
-      form.append('file',blob);
-      r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+      form.append('file',new Blob([json],{type:'application/json'}));
+      r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',{
         method:'POST',headers:{Authorization:'Bearer '+gdToken},body:form});
     }
     if(r.ok){
       const agora=new Date().toLocaleString('pt-BR');
       localStorage.setItem('gd_last_sync','⬆ Enviado em '+agora);
       atualizarUltSync();mostrarStatus('✅ Dados enviados ao Drive!','ok');
-    }else{mostrarStatus('Erro ao enviar. Token expirado? Faça login novamente.','err');}
+    }else{
+      const err=await r.json().catch(()=>({}));
+      mostrarStatus('Erro ao enviar: '+(err.error?.message||r.status),'err');
+    }
   }catch(e){mostrarStatus('Erro: '+e.message,'err');}
 }
 
@@ -1384,10 +1394,10 @@ async function gdReceber(){
   mostrarStatus('Baixando dados do Drive...','info');
   try{
     let fid=await gdBuscarFileId();
-    if(!fid){mostrarStatus('Nenhum arquivo no Drive ainda. Envie os dados de outro dispositivo primeiro.','warn');return;}
-    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,{
+    if(!fid){mostrarStatus('Nenhum arquivo encontrado. Verifique se o arquivo foi compartilhado com sua conta.','warn');return;}
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media&supportsAllDrives=true`,{
       headers:{Authorization:'Bearer '+gdToken}});
-    if(!r.ok){mostrarStatus('Erro ao baixar.','err');return;}
+    if(!r.ok){mostrarStatus('Erro ao baixar: '+r.status,'err');return;}
     const dados=await r.json();
     state=dados;
     try{localStorage.setItem('orc_v3',JSON.stringify(state));}catch(e){}
@@ -1445,14 +1455,14 @@ async function gdEnviarSilencioso(){
     let fid=await gdBuscarFileId();
     let r;
     if(fid){
-      r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fid}?uploadType=media`,{
+      r=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fid}?uploadType=media&supportsAllDrives=true`,{
         method:'PATCH',headers:{Authorization:'Bearer '+gdToken,'Content-Type':'application/json'},body:json});
     }else{
       const meta=JSON.stringify({name:GD_FILE,mimeType:'application/json'});
       const form=new FormData();
       form.append('metadata',new Blob([meta],{type:'application/json'}));
       form.append('file',blob);
-      r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',{
+      r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true',{
         method:'POST',headers:{Authorization:'Bearer '+gdToken},body:form});
     }
     if(r&&r.ok){
@@ -1460,7 +1470,6 @@ async function gdEnviarSilencioso(){
       localStorage.setItem('gd_last_sync','⬆ Auto-sync em '+agora);
       atualizarUltSync();
     }else if(r&&r.status===401){
-      // token expirado — renova automaticamente
       gdToken=null;
       gdRenovarTokenSilencioso();
     }else{
