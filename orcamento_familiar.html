@@ -1272,11 +1272,11 @@ async function gdReceberSilencioso(){
   try{
     let fid=await gdBuscarFileId();
     if(!fid)return;
-    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,{
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media&supportsAllDrives=true`,{
       headers:{Authorization:'Bearer '+gdToken}});
     if(!r.ok)return;
     const dados=await r.json();
-    // só atualiza se os dados do Drive forem mais recentes
+    try{localStorage.removeItem('orc_v3');}catch(e){}
     state=dados;
     try{localStorage.setItem('orc_v3',JSON.stringify(state));}catch(e){}
     render();
@@ -1393,19 +1393,44 @@ async function gdReceber(){
   if(!gdToken){mostrarStatus('Faça login primeiro.','warn');return;}
   mostrarStatus('Baixando dados do Drive...','info');
   try{
-    let fid=await gdBuscarFileId();
-    if(!fid){mostrarStatus('Nenhum arquivo encontrado. Verifique se o arquivo foi compartilhado com sua conta.','warn');return;}
+    // busca arquivo com log detalhado
+    const urlBusca=`https://www.googleapis.com/drive/v3/files?q=name='${GD_FILE}'+and+trashed=false&spaces=drive&fields=files(id,name,owners,shared)&includeItemsFromAllDrives=true&supportsAllDrives=true`;
+    const rb=await fetch(urlBusca,{headers:{Authorization:'Bearer '+gdToken}});
+    const db=await rb.json();
+    console.log('Busca resultado:',JSON.stringify(db));
+
+    if(!db.files||db.files.length===0){
+      // tenta busca alternativa sem filtro de nome para ver o que existe
+      const rb2=await fetch(`https://www.googleapis.com/drive/v3/files?fields=files(id,name,shared)&includeItemsFromAllDrives=true&supportsAllDrives=true`,{headers:{Authorization:'Bearer '+gdToken}});
+      const db2=await rb2.json();
+      console.log('Todos os arquivos visíveis:',JSON.stringify(db2));
+      mostrarStatus('Nenhum arquivo encontrado. Verifique o console (F12) para diagnóstico.','warn');
+      return;
+    }
+
+    const fid=db.files[0].id;
+    gdFileId=fid;
     const r=await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media&supportsAllDrives=true`,{
       headers:{Authorization:'Bearer '+gdToken}});
-    if(!r.ok){mostrarStatus('Erro ao baixar: '+r.status,'err');return;}
+    if(!r.ok){
+      const errTxt=await r.text();
+      console.log('Erro ao baixar:',r.status,errTxt);
+      mostrarStatus('Erro ao baixar: '+r.status,'err');
+      return;
+    }
     const dados=await r.json();
+    // limpa localStorage antes de aplicar para evitar dados antigos
+    try{localStorage.removeItem('orc_v3');}catch(e){}
     state=dados;
     try{localStorage.setItem('orc_v3',JSON.stringify(state));}catch(e){}
     render();
     const agora=new Date().toLocaleString('pt-BR');
     localStorage.setItem('gd_last_sync','⬇ Recebido em '+agora);
     atualizarUltSync();mostrarStatus('✅ Dados recebidos do Drive!','ok');
-  }catch(e){mostrarStatus('Erro: '+e.message,'err');}
+  }catch(e){
+    console.log('Exceção:',e);
+    mostrarStatus('Erro: '+e.message,'err');
+  }
 }
 
 function gdAutoSync(){
