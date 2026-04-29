@@ -442,6 +442,8 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);min-
             <button class="btn-primary" onclick="gdReceber()">⬇ Receber dados</button>
           </div>
           <button class="btn-primary" onclick="gdAutoSync()" style="margin-top:10px;background:var(--blue-light);color:var(--blue);border:1.5px solid var(--blue)" id="btn-autosync">🔄 Ativar auto-sync</button>
+          <button class="btn-primary" onclick="gdDiagnostico()" style="margin-top:10px;background:#F3F4F6;color:#374151;border:1.5px solid #D1D5DB">🔍 Diagnóstico</button>
+          <div id="diag-result" style="display:none;margin-top:10px;padding:12px;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:8px;font-size:11px;font-family:monospace;word-break:break-all;max-height:200px;overflow-y:auto;color:#111"></div>
         </div>
       </div>
       <div class="card" style="border-color:#BFDBFE;background:var(--blue-light)">
@@ -1439,7 +1441,54 @@ function atualizarUltSync(){
   if(el)el.textContent=localStorage.getItem('gd_last_sync')||'Nunca sincronizado';
 }
 
-function mostrarStatus(msg,tipo){
+async function gdDiagnostico(){
+  const el=document.getElementById('diag-result');
+  el.style.display='block';
+  el.textContent='Executando diagnóstico...';
+  let log=[];
+  log.push('Token: '+(gdToken?'✅ presente':'❌ ausente'));
+  log.push('Client ID: '+(gdClientId?gdClientId.slice(0,20)+'...':'❌ ausente'));
+  log.push('Auto-sync: '+(autoSyncOn?'✅ ativo':'❌ inativo'));
+  log.push('localStorage orc_v3: '+(localStorage.getItem('orc_v3')?'✅ presente ('+Math.round(localStorage.getItem('orc_v3').length/1024)+'kb)':'❌ vazio'));
+  if(gdToken){
+    try{
+      // testa userinfo
+      const ru=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+gdToken}});
+      const u=await ru.json();
+      log.push('Usuário logado: '+(u.email||'desconhecido'));
+      // busca arquivo
+      const rb=await fetch(`https://www.googleapis.com/drive/v3/files?q=name='orcamento_familiar.json'+and+trashed=false&fields=files(id,name,owners,shared)&includeItemsFromAllDrives=true&supportsAllDrives=true`,{headers:{Authorization:'Bearer '+gdToken}});
+      const db=await rb.json();
+      if(db.files&&db.files.length>0){
+        log.push('Arquivo no Drive: ✅ encontrado');
+        log.push('ID: '+db.files[0].id);
+        log.push('Dono: '+(db.files[0].owners?.[0]?.emailAddress||'?'));
+        log.push('Compartilhado: '+(db.files[0].shared?'sim':'não'));
+        // tenta baixar
+        const rd=await fetch(`https://www.googleapis.com/drive/v3/files/${db.files[0].id}?alt=media&supportsAllDrives=true`,{headers:{Authorization:'Bearer '+gdToken}});
+        if(rd.ok){
+          const d=await rd.json();
+          log.push('Conteúdo: ✅ lido com sucesso');
+          log.push('Receitas: '+d.receitas?.length+' | Despesas: '+d.despesas?.length);
+          log.push('NomeA: '+d.nomeA+' | NomeB: '+d.nomeB);
+        }else{
+          log.push('❌ Erro ao ler arquivo: '+rd.status);
+        }
+      }else{
+        log.push('❌ Arquivo NÃO encontrado no Drive');
+        // lista todos arquivos visíveis
+        const ra=await fetch('https://www.googleapis.com/drive/v3/files?fields=files(id,name)&includeItemsFromAllDrives=true&supportsAllDrives=true',{headers:{Authorization:'Bearer '+gdToken}});
+        const da=await ra.json();
+        log.push('Arquivos visíveis: '+(da.files?.map(f=>f.name).join(', ')||'nenhum'));
+      }
+    }catch(e){
+      log.push('Erro: '+e.message);
+    }
+  }else{
+    log.push('⚠️ Faça login primeiro para diagnóstico completo');
+  }
+  el.textContent=log.join('\n');
+}
   const el=document.getElementById('sync-status-bar');if(!el)return;
   const cores={ok:'#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7',
     warn:'#FFFBEB;color:#92400E;border:1.5px solid #FCD34D',
