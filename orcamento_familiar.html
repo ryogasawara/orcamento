@@ -521,28 +521,16 @@ const ANO_HOJE=hoje.getFullYear();
 function parseD(s){if(!s)return null;const p=s.split('-');return{ano:+p[0],mes:+p[1]-1,dia:+p[2]};}
 function fmtD(s){if(!s)return '';const p=parseD(s);return p?`${String(p.dia).padStart(2,'0')}/${String(p.mes+1).padStart(2,'0')}/${p.ano}`:'';}
 
-// ── ESTADO ───────────────────────────────────────────────────
-function carregarDados(){
-  try{const s=localStorage.getItem('orc_v3');if(s)return JSON.parse(s);}catch(e){}
+function dadosVazios(){
   return{
     nomeA:'Pessoa A',nomeB:'Pessoa B',
-    receitas:[
-      {id:1,nome:'Salário',valor:4500,pessoa:'A',data:HOJE_STR},
-      {id:2,nome:'Salário',valor:3200,pessoa:'B',data:HOJE_STR}
-    ],
-    despesas:[
-      {id:1,nome:'Aluguel',valor:1800,cat:'housing',pessoa:'ambos',data:HOJE_STR},
-      {id:2,nome:'Supermercado',valor:1200,cat:'food',pessoa:'B',data:HOJE_STR},
-      {id:3,nome:'Escola',valor:900,cat:'education',pessoa:'A',data:HOJE_STR},
-      {id:4,nome:'Combustível',valor:400,cat:'transport',pessoa:'A',data:HOJE_STR},
-      {id:5,nome:'Plano de saúde',valor:600,cat:'health',pessoa:'ambos',data:HOJE_STR}
-    ],
-    metas:[
-      {id:1,nome:'Reserva de emergência',total:15000,atual:4500},
-      {id:2,nome:'Viagem em família',total:8000,atual:1200}
-    ],
+    receitas:[],despesas:[],metas:[],
     limites:{housing:2000,food:1500,transport:600,health:800,education:1200,leisure:500,other:400}
   };
+}
+function carregarDados(){
+  try{const s=localStorage.getItem('orc_v3');if(s){const d=JSON.parse(s);if(d&&d.receitas)return d;}}catch(e){}
+  return dadosVazios();
 }
 let state=carregarDados();
 let nextId=500;
