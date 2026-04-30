@@ -534,7 +534,17 @@ function carregarDados(){
   try{const s=localStorage.getItem('orc_v3');if(s){const d=JSON.parse(s);if(d&&d.receitas)return d;}}catch(e){}
   return dadosVazios();
 }
-let state=carregarDados();
+function validarState(s){
+  if(!s||typeof s!=='object')return dadosVazios();
+  if(!Array.isArray(s.receitas))s.receitas=[];
+  if(!Array.isArray(s.despesas))s.despesas=[];
+  if(!Array.isArray(s.metas))s.metas=[];
+  if(!s.limites)s.limites={housing:2000,food:1500,transport:600,health:800,education:1200,leisure:500,other:400};
+  if(!s.nomeA)s.nomeA='Pessoa A';
+  if(!s.nomeB)s.nomeB='Pessoa B';
+  return s;
+}
+let state=validarState(carregarDados());
 let nextId=500;
 let pieInst=null,histInst=null,pendingNLP=null,recognition=null;
 let filtroMes=MES_HOJE,filtroAno=ANO_HOJE;
@@ -546,12 +556,6 @@ function recFilt(){return state.receitas.filter(emFiltro);}
 function despFilt(){return state.despesas.filter(emFiltro);}
 function totRec(m=filtroMes,a=filtroAno){return state.receitas.filter(r=>{const p=parseD(r.data);return p&&p.mes===m&&p.ano===a;}).reduce((s,r)=>s+Number(r.valor),0);}
 function totDesp(m=filtroMes,a=filtroAno){return state.despesas.filter(d=>{const p=parseD(d.data);return p&&p.mes===m&&p.ano===a;}).reduce((s,d)=>s+Number(d.valor),0);}
-
-function salvar(){
-  try{localStorage.setItem('orc_v3',JSON.stringify(state));}catch(e){}
-  const b=document.getElementById('save-banner');
-  b.classList.add('show');setTimeout(()=>b.classList.remove('show'),1800);
-}
 
 function getAnos(){
   const s=new Set([ANO_HOJE]);
@@ -584,9 +588,10 @@ function aplicarFiltro(){
 function showTab(t,btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
-  document.getElementById('tab-'+t).classList.add('active');
+  const tab=document.getElementById('tab-'+t);
+  if(tab)tab.classList.add('active');
   if(btn)btn.classList.add('active');
-  render();
+  try{render();}catch(e){console.warn('render error:',e);}
 }
 
 function atualizaNomes(){
@@ -598,17 +603,19 @@ function atualizaNomes(){
 }
 
 function render(){
-  popularFiltros();
-  const lbl=MESES_FULL[filtroMes]+' '+filtroAno;
-  const e1=document.getElementById('lbl-rec');if(e1)e1.textContent=lbl;
-  const e2=document.getElementById('lbl-desp');if(e2)e2.textContent=lbl;
-  renderMetrics();renderAlertas();renderDivisao();
-  renderReceitas();renderDespesas();renderMetas();
-  renderLimites();renderHistorico();renderPie();
-  const na=document.getElementById('nome-a');const nb=document.getElementById('nome-b');
-  if(na&&state.nomeA!=='Pessoa A')na.value=state.nomeA;
-  if(nb&&state.nomeB!=='Pessoa B')nb.value=state.nomeB;
-  ['rec-data','desp-data'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=HOJE_STR;});
+  try{
+    popularFiltros();
+    const lbl=MESES_FULL[filtroMes]+' '+filtroAno;
+    const e1=document.getElementById('lbl-rec');if(e1)e1.textContent=lbl;
+    const e2=document.getElementById('lbl-desp');if(e2)e2.textContent=lbl;
+    renderMetrics();renderAlertas();renderDivisao();
+    renderReceitas();renderDespesas();renderMetas();
+    renderLimites();renderHistorico();renderPie();
+    const na=document.getElementById('nome-a');const nb=document.getElementById('nome-b');
+    if(na&&state.nomeA!=='Pessoa A')na.value=state.nomeA;
+    if(nb&&state.nomeB!=='Pessoa B')nb.value=state.nomeB;
+    ['rec-data','desp-data'].forEach(id=>{const el=document.getElementById(id);if(el&&!el.value)el.value=HOJE_STR;});
+  }catch(e){console.warn('Erro no render:',e);}
 }
 
 function renderMetrics(){
@@ -1267,7 +1274,7 @@ async function gdReceberSilencioso(){
     if(!r.ok)return;
     const dados=await r.json();
     try{localStorage.removeItem('orc_v3');}catch(e){}
-    state=dados;
+    state=validarState(dados);
     try{localStorage.setItem('orc_v3',JSON.stringify(state));}catch(e){}
     render();
     const agora=new Date().toLocaleString('pt-BR');
@@ -1411,7 +1418,7 @@ async function gdReceber(){
     const dados=await r.json();
     // limpa localStorage antes de aplicar para evitar dados antigos
     try{localStorage.removeItem('orc_v3');}catch(e){}
-    state=dados;
+    state=validarState(dados);
     try{localStorage.setItem('orc_v3',JSON.stringify(state));}catch(e){}
     render();
     const agora=new Date().toLocaleString('pt-BR');
@@ -1439,6 +1446,17 @@ function atualizarBtnAutoSync(){
 function atualizarUltSync(){
   const el=document.getElementById('sync-last');
   if(el)el.textContent=localStorage.getItem('gd_last_sync')||'Nunca sincronizado';
+}
+
+function mostrarStatus(msg,tipo){
+  const el=document.getElementById('sync-status-bar');if(!el)return;
+  const cores={ok:'#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7',
+    warn:'#FFFBEB;color:#92400E;border:1.5px solid #FCD34D',
+    err:'#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5',
+    info:'var(--blue-light);color:#1E40AF;border:1.5px solid #BFDBFE'};
+  el.setAttribute('style',`display:flex;align-items:center;gap:8px;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:600;background:${cores[tipo]||cores.info}`);
+  el.textContent=msg;
+  if(tipo==='ok')setTimeout(()=>el.setAttribute('style','display:none'),4000);
 }
 
 async function gdDiagnostico(){
@@ -1488,15 +1506,6 @@ async function gdDiagnostico(){
     log.push('⚠️ Faça login primeiro para diagnóstico completo');
   }
   el.textContent=log.join('\n');
-}
-  const el=document.getElementById('sync-status-bar');if(!el)return;
-  const cores={ok:'#ECFDF5;color:#065F46;border:1.5px solid #6EE7B7',
-    warn:'#FFFBEB;color:#92400E;border:1.5px solid #FCD34D',
-    err:'#FEF2F2;color:#991B1B;border:1.5px solid #FCA5A5',
-    info:'var(--blue-light);color:#1E40AF;border:1.5px solid #BFDBFE'};
-  el.setAttribute('style',`display:flex;align-items:center;gap:8px;border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:14px;font-size:13px;font-weight:600;background:${cores[tipo]||cores.info}`);
-  el.textContent=msg;
-  if(tipo==='ok')setTimeout(()=>el.setAttribute('style','display:none'),4000);
 }
 
 // sobrescreve salvar para auto-sync — versão corrigida
