@@ -1355,12 +1355,12 @@ async function gdBuscarFileId(){
       return gdFileId;
     }
     // não encontrou por nome — usa ID fixo do arquivo compartilhado do Ryothy
-    const ID_FIXO='17MTva1od69-bXMDA8O8xYOjNy9XLsQt5';
+    const ID_FIXO='1Nj3dg9EHXUglUY3CMjL7v7Bxe7uuwnzI';
     console.log('Usando ID fixo:', ID_FIXO);
     gdFileId=ID_FIXO;
     return gdFileId;
   }catch(e){
-    const ID_FIXO='17MTva1od69-bXMDA8O8xYOjNy9XLsQt5';
+    const ID_FIXO='1Nj3dg9EHXUglUY3CMjL7v7Bxe7uuwnzI';
     console.warn('Erro ao buscar, usando ID fixo:',e);
     gdFileId=ID_FIXO;
     return gdFileId;
