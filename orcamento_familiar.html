@@ -660,12 +660,13 @@ function renderDivisao(){
 
 function itemRow(item,tipo){
   const colecao=tipo==='despesa'?'despesas':'receitas';
+  const tagHtml=tipo==='despesa'?'<span class="tag '+item.cat+'">'+catNames[item.cat]+'</span>':'';
   return`<div class="item-row">
     <div class="item-avatar av-${item.pessoa}">${item.pessoa==='ambos'?'AB':nomeP(item.pessoa).charAt(0)}</div>
     <div class="item-info" onclick="abrirEditar('${colecao}',${item.id})" style="cursor:pointer">
       <div class="item-name">${item.nome}</div>
       <div class="item-meta">
-        ${tipo==='despesa'?`<span class="tag ${item.cat}">${catNames[item.cat]}</span>`:``}
+        ${tagHtml}
         <span class="item-date">📅 ${fmtD(item.data)}</span>
         <span class="item-date">· ${nomeP(item.pessoa)}</span>
       </div>
@@ -740,7 +741,7 @@ function renderLimites(){
           style="width:110px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);font-family:Nunito,sans-serif;font-size:13px;font-weight:600;background:var(--bg)"
           onchange="state.limites['${cat}']=Number(this.value);salvar();render()"/>
       </div>
-      ${lim?`<div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${cor}"></div></div>`:''}
+      ${lim?'<div class="bar-bg"><div class="bar-fill" style="width:'+pct+'%;background:'+cor+'"></div></div>':''}
     </div>`;
   }).join('');
 }
@@ -843,7 +844,7 @@ function renderTodos(){
       <div class="item-info">
         <div class="item-name">${item.nome}</div>
         <div class="item-meta">
-          ${item._t==='despesa'?`<span class="tag ${item.cat}">${catNames[item.cat]}</span>`:`<span class="tag receita-tag">Receita</span>`}
+          ${item._t==='despesa'?'<span class="tag '+item.cat+'">'+catNames[item.cat]+'</span>':'<span class="tag receita-tag">Receita</span>'}
           <span class="item-date">📅 ${fmtD(item.data)}</span>
           <span class="item-date">· ${nomeP(item.pessoa)}</span>
         </div>
@@ -1039,7 +1040,7 @@ function parseNLP(){
     </div>
     <div class="form-row">
       <div class="form-group"><label>Categoria</label>
-        <select id="pv-cat">${Object.keys(catNames).map(c=>`<option value="${c}" ${c===cat?'selected':''}>${catNames[c]}</option>`).join('')}</select>
+        <select id="pv-cat">${Object.keys(catNames).map(c=>'<option value="'+c+'" '+(c===cat?'selected':'')+'>'+ catNames[c]+'</option>').join('')}</select>
       </div>
       <div class="form-group"><label>Quem</label>
         <select id="pv-pessoa">
@@ -1343,9 +1344,9 @@ async function atualizarUserInfo(){
 async function gdBuscarFileId(){
   if(!gdToken)return null;
   try{
-    // busca em todos os drives acessíveis (próprio + compartilhados)
+    // tenta buscar por nome primeiro (encontra arquivo próprio se existir)
     const r=await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=name='${GD_FILE}'+and+trashed=false&spaces=drive&fields=files(id,name,owners)&includeItemsFromAllDrives=true&supportsAllDrives=true`,
+      `https://www.googleapis.com/drive/v3/files?q=name='${GD_FILE}'+and+trashed=false&spaces=drive&fields=files(id,name)&includeItemsFromAllDrives=true&supportsAllDrives=true`,
       {headers:{Authorization:'Bearer '+gdToken}}
     );
     const d=await r.json();
@@ -1353,8 +1354,17 @@ async function gdBuscarFileId(){
       gdFileId=d.files[0].id;
       return gdFileId;
     }
-    return null;
-  }catch(e){console.warn('Erro ao buscar arquivo:',e);return null;}
+    // não encontrou por nome — usa ID fixo do arquivo compartilhado do Ryothy
+    const ID_FIXO='17MTva1od69-bXMDA8O8xYOjNy9XLsQt5';
+    console.log('Usando ID fixo:', ID_FIXO);
+    gdFileId=ID_FIXO;
+    return gdFileId;
+  }catch(e){
+    const ID_FIXO='17MTva1od69-bXMDA8O8xYOjNy9XLsQt5';
+    console.warn('Erro ao buscar, usando ID fixo:',e);
+    gdFileId=ID_FIXO;
+    return gdFileId;
+  }
 }
 
 async function gdEnviar(){
